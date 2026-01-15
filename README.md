@@ -1,15 +1,39 @@
 # geograph-type-classifier
-Building a ML Model to predict Geograph Type Tags
+### Predicting Geograph Type Tags via CLIP & Spatial Metadata
 
-# Overview
+## Overview
 
-This repository will contain three things
-1. Access to prepared datasets for training. (multiple sizes) 
-2. A torch implementation of a training pipeline.
-3. A functional model prepared with above, usable for immidate inference. Demo script provided. 
+This repository provides a complete machine learning ecosystem for categorizing Geograph images into their native "Type" tags. The project bridges raw visual data with geographic context to automate archival classification.
 
-Although the by providing the raw dataset, we hope others can try building an even better model. 
+The project consists of three core components:
 
+1. **Curated Datasets:** Access to prepared training sets featuring precomputed **CLIP ViT-B/32** image embeddings (512-dimensional), quantized distance metadata, and ground-truth Type tags.
+   - *Current Status:* 150k samples.
+   - *Target:* 5.0M samples.
+2. **Training Pipeline:** A robust PyTorch implementation designed for efficiency on both CPU and GPU. The pipeline is fully functional within Google Colab environments for immediate experimentation.
+3. **Production-Ready Model:** A pre-trained functional model using the schema above. We provide a demo script for immediate inference on new image/metadata pairs.
+
+By providing the raw datasets and embeddings, we hope to enable the community to build even more sophisticated models for geographic visual understanding.
+
+---
+*Note: This project was "Vibe Coded" in collaboration with Gemini 3 (Flash).*
+
+## Technical Requirements & Implementation
+
+### 1. Embeddings & Distance Logic
+* **Embeddings:** The model utilizes **CLIP ViT-B/32** image embeddings (512-dimensional vectors). If generating your own, ensure you use the ViT-B/32 variant.
+* **Distance Quantization:** The model relies on a quantized power-of-two distance index. This helps distinguish between "Cross Near" and "Cross Far" perspectives.
+
+**Distance Calculation (Python):**
+```python
+import math
+
+def calculate_geograph_distance(e1, n1, e2, n2):
+    """Calculates Euclidean distance and snaps to floor power-of-two."""
+    if not (n1 > 0 and e2 > 0): return "Unknown"
+    dist = math.sqrt((e1 - e2)**2 + (n1 - n2)**2)
+    if dist == 0: return "0"
+    return str(int(2**math.floor(math.log2(dist))))
 
 # Dataset Implementation & Training Guide
 
@@ -42,6 +66,36 @@ CLASSES = [
 ]
 ```
 
+## Distance Quantization Logic
+
+The model uses a specific logarithmic binning for distance metadata. We provide a `get_dist_idx()` helper to convert these values into model inputs.
+
+### 1. Distance Mapping
+The model expects an integer index based on the following power-of-two buckets:
+* **0**: Exact location / 0m
+* **1-21**: Logarithmic buckets (2^0m to 2^20m)
+* **22**: Unknown / Missing data
+
+### 2. Manual Calculation
+If you are working with raw National Grid (eg OSGB36 or Irish Grid) coordinates, use this logic to match the training data:
+
+```python
+import math
+
+def get_geograph_distance(e1, n1, e2, n2):
+    if not (n1 > 0 and e2 > 0):
+        return "Unknown"
+    # Euclidean distance
+    d = math.sqrt((e1 - e2)**2 + (n1 - n2)**2)
+    if d == 0: return "0"
+    # Snap to nearest floor power of 2
+    return str(int(2**math.floor(math.log2(d))))
+
+# Convert coordinate distance to model index
+raw_dist = get_geograph_distance(nateast, natnorth, vpeast, vpnorth)
+dist_input = get_dist_idx(raw_dist)
+```
+
 # Pre-Trained Model
 
 ## Technical Requirements
@@ -68,3 +122,80 @@ for i, class_name in enumerate(checkpoint['classes']):
     print(f"{class_name}: {probabilities[0][i]:.2%}")
 
 #Reminder, the model produces the "Cross Far" class, which is intended to indicate a long distance shot, so treat as "Cross Grid", short range cross-grids can be detected from coordiates. 
+```
+
+# Suggested Training Setup (PyTorch)
+When training, use the From Above tag to "boost" the From Drone neuron:
+
+```python
+CLASSES = ["Aerial", "Close Look", "Cross Far", "Extra", "Geograph", "Inside", "From Drone"]
+CLASS_TO_IDX = {cls: i for i, cls in enumerate(CLASSES)}
+
+# Generate power-of-2 map dynamically up to 2^20 (1,048,576)
+DIST_MAP = {str(2**i): i + 1 for i in range(21)}
+DIST_MAP["0"] = 0
+DIST_MAP["Unknown"] = 22
+DIST_MAP[""] = 0 #empty string would imply zero distance not unknown
+
+def get_dist_idx(val):
+    val_str = str(val).strip()
+    return DIST_MAP.get(val_str, DIST_MAP["Unknown"])
+
+CLIP_DIM = 512 # Standard CLIP embedding dimension
+
+# Define a function to decode the Base64-encoded vector
+def decode_vector(encoded_str):
+    try:
+        binary_data = base64.b64decode(encoded_str)
+        return np.frombuffer(binary_data, dtype=np.float32)
+    except Exception as e:
+        # Catch any other unpacking errors
+        print(f"Warning: Error unpacking binary data: {e}. Returning zero vector.")
+        return [0.0] * CLIP_DIM
+
+class MultimodalGeographDataset(Dataset):
+    def __init__(self, data_list):
+        self.data = data_list
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        item = self.data[idx]
+
+        # Process Embeddings
+        vec = torch.tensor(decode_vector(item['embeddings']), dtype=torch.float32)
+
+        # Process Distance
+        dist_idx = torch.tensor(get_dist_idx(item['distance']), dtype=torch.long)
+
+        # Process Multi-labels (One-Hot Encoding)
+        label_tensor = torch.zeros(len(CLASSES))
+        raw_types = item['types'].split(',')
+        for t in raw_types:
+            # Note: We treat "Cross Grid" as "Cross Far" for the target label if dist > 256
+            clean_t = t.strip()
+            if clean_t == "Cross Grid":
+                if str(item['distance']).isdigit() and int(item['distance']) > 256:
+                    clean_t = "Cross Far"
+                elif len(raw_types) == 1: ##if was ONLY gross grid, then change it
+                    clean_t = "Geograph" # Visual proxy
+                else: #else just ignore the CR (can still be inside etc)
+                    continue
+
+            # Funnel 'From Above' into the Drone class
+            # its a fake tag for images that look like drone, but probably
+            # arent. but included so the model can learn from them.
+            if clean_t == "From Above":
+                clean_t = "From Drone"
+
+            if clean_t in CLASS_TO_IDX:
+                label_tensor[CLASS_TO_IDX[clean_t]] = 1.0
+
+        # Calculate Weight
+        weight = torch.tensor(item.get('weight', 1.0), dtype=torch.float32)
+
+        return vec, dist_idx, label_tensor, weight
+```
+
+See the training notebook, for more complete implementation.
