@@ -18,6 +18,18 @@ By providing the raw datasets and embeddings, we hope to enable the community to
 ---
 *Note: This project was "Vibe Coded" in collaboration with Gemini 3 (Flash).*
 
+## Credits & Citations
+
+The architectural approach and the core concept of fusing **CLIP Embeddings** with **Spatial Metadata** were directly inspired by the **CLIP the Landscape** project. While that project focused on Geograph "Context Tags," this implementation adapts the methodology specifically for predicting Geograph **"Type"** tags using an expanded dataset and a custom classification head.
+
+If you find this work or the underlying methodology useful, please cite the original research paper:
+
+> **Ilya Ilyankou, Natchapon Jongwiriyanurak, Tao Cheng, James Haworth,** > *CLIP the landscape: Automated tagging of crowdsourced landscape images*,  
+> **Remote Sensing Applications: Society and Environment**, Volume 41, 2026, 101824, ISSN 2352-9385.  
+> [https://doi.org/10.1016/j.rsase.2025.101824](https://doi.org/10.1016/j.rsase.2025.101824)
+
+**SpaceTimeLab Implementation:** [github.com/SpaceTimeLab/ClipTheLandscape](https://github.com/SpaceTimeLab/ClipTheLandscape)
+
 ## Technical Requirements & Implementation
 
 ### 1. Embeddings & Distance Logic
