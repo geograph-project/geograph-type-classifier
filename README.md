@@ -8,7 +8,7 @@ This repository provides a complete machine learning ecosystem for categorizing 
 The project consists of three core components:
 
 1. **Curated Datasets:** Access to prepared training sets featuring precomputed **CLIP ViT-B/32** image embeddings (512-dimensional), quantized distance metadata, and ground-truth Type tags.
-   - *Current Status:* 150k samples.
+   - *Current Status:* ~130k samples. Published to Kaggle: https://www.kaggle.com/datasets/barrybhunter/geograph-types-dataset-1
    - *Target:* 5.0M samples.
 2. **Training Pipeline:** A robust PyTorch implementation designed for efficiency on both CPU and GPU. The pipeline is fully functional within Google Colab environments for immediate experimentation.
 3. **Production-Ready Model:** A pre-trained functional model using the schema above. We provide a demo script for immediate inference on new image/metadata pairs.
