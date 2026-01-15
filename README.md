@@ -11,7 +11,10 @@ The project consists of three core components:
    - *Current Status:* ~130k samples. Published to Kaggle: https://www.kaggle.com/datasets/barrybhunter/geograph-types-dataset-1
    - *Target:* 5.0M samples.
 2. **Training Pipeline:** A robust PyTorch implementation designed for efficiency on both CPU and GPU. The pipeline is fully functional within Google Colab environments for immediate experimentation.
+   - https://colab.research.google.com/drive/116IUlS0UN9YdeDkoWUaOLmwUF1v5An_N?usp=sharing
+   - Also simplified version at https://www.kaggle.com/code/barrybhunter/geograph-type-classifier-starter , which is not as well tested. 
 3. **Production-Ready Model:** A pre-trained functional model using the schema above. We provide a demo script for immediate inference on new image/metadata pairs.
+   - included in this repository
 
 By providing the raw datasets and embeddings, we hope to enable the community to build even more sophisticated models for geographic visual understanding.
 
