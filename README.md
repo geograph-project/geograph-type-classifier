@@ -46,6 +46,7 @@ def calculate_geograph_distance(e1, n1, e2, n2):
     dist = math.sqrt((e1 - e2)**2 + (n1 - n2)**2)
     if dist == 0: return "0"
     return str(int(2**math.floor(math.log2(dist))))
+```
 
 # Dataset Implementation & Training Guide
 
@@ -77,6 +78,7 @@ CLASSES = [
     "From Drone"
 ]
 ```
+Code below demonstrates converting the tags in the dataset into this schema.
 
 ## Distance Quantization Logic
 
