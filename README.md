@@ -40,6 +40,7 @@ If you find this work or the underlying methodology useful, please cite the orig
 * **Distance Quantization:** The model relies on a quantized power-of-two distance index. This helps distinguish between "Cross Near" and "Cross Far" perspectives.
 
 **Distance Calculation (Python):**
+Already performed on the provided Geograph dataset, this implementation is for reference purposes
 ```python
 import math
 
