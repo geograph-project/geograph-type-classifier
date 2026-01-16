@@ -48,7 +48,6 @@ def get_dist_idx(val):
     val_str = str(val).strip()
     return DIST_MAP.get(val_str, DIST_MAP["Unknown"])
 
-# --- 2. DECODER & WEIGHTING RULES ---
 CLIP_DIM = 512 # Standard CLIP embedding dimension
 
 # Define a function to decode the Base64-encoded vector
@@ -71,69 +70,7 @@ def decode_vector(encoded_str):
         # Catch any other unpacking errors
         print(f"Warning: Error unpacking binary data: {e}. Returning zero vector.")
         return [0.0] * CLIP_DIM
-
-def calculate_sample_weight(types_str, distance):
-    """Implementing the rules we discussed for noisy labels."""
-    types = types_str.split(',')
-    dist_val = str(distance)
-
-    # Rule 1: Geograph with far or unknown distance = Low weight (Noisy)
-    if "Geograph" in types and (dist_val == "Unknown" or (dist_val.isdigit() and int(dist_val) > 256)):
-        return 0.2
-
-    # Rule 2: Cross Grid with close distance = Re-label conceptually as Geograph proxy
-    # We give it a medium weight because visually it's a Geograph, not Cross-Far
-    if "Cross Grid" in types and dist_val.isdigit() and int(dist_val) <= 256:
-        return 0.5
-
-    return 1.0 # Standard weight for clear examples
-
-# --- 3. DATASET CLASS ---
-class MultimodalGeographDataset(Dataset):
-    def __init__(self, data_list):
-        self.data = data_list
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        item = self.data[idx]
-
-        # Process Embeddings
-        vec = torch.tensor(decode_vector(item['embeddings']), dtype=torch.float32)
-
-        # Process Distance
-        dist_idx = torch.tensor(get_dist_idx(item['distance']), dtype=torch.long)
-
-        # Process Multi-labels (One-Hot Encoding)
-        label_tensor = torch.zeros(len(CLASSES))
-        raw_types = item['types'].split(',')
-        for t in raw_types:
-            # Note: We treat "Cross Grid" as "Cross Far" for the target label if dist > 256
-            clean_t = t.strip()
-            if clean_t == "Cross Grid":
-                if str(item['distance']).isdigit() and int(item['distance']) > 256:
-                    clean_t = "Cross Far"
-                elif len(raw_types) == 1: ##if was ONLY gross grid, then change it
-                    clean_t = "Geograph" # Visual proxy
-                else: #else just ignore the CR (can still be inside etc)
-                    continue
-
-            # NEW: Funnel 'From Above' into the Drone class
-            # its a fake tag for images that look like drone, but probably
-            # arent. but included so the model can learn from them.
-            if clean_t == "From Above":
-                clean_t = "From Drone"
-
-            if clean_t in CLASS_TO_IDX:
-                label_tensor[CLASS_TO_IDX[clean_t]] = 1.0
-
-        # Calculate Weight
-        ##weight = torch.tensor(calculate_sample_weight(item['types'], item['distance']), dtype=torch.float32)
-        weight = torch.tensor(float(item.get('weight', 1.0)), dtype=torch.float32)
-
-        return vec, dist_idx, label_tensor, weight
-        
+       
 ################################################
 
 class GeographModel(nn.Module):
@@ -156,21 +93,6 @@ class GeographModel(nn.Module):
         d_feat = self.dist_emb(dist_idx)
         combined = torch.cat([clip_vec, d_feat], dim=1)
         return self.fc(combined)
-
-    def save_checkpoint(self, filepath, optimizer=None, epoch=None, loss=None):
-        """Saves the model weights and all necessary metadata to disk."""
-        checkpoint = {
-            'model_state_dict': self.state_dict(),
-            'classes': self.classes,
-            'dist_map': self.dist_map,
-            'clip_dim': 512, # Assuming standard CLIP
-            'dist_embed_dim': 16,
-            'epoch': epoch,
-            'optimizer_state_dict': optimizer.state_dict() if optimizer else None,
-            'loss': loss
-        }
-        torch.save(checkpoint, filepath)
-        print(f"Model saved to {filepath}")
 
     @classmethod
     def load_checkpoint(cls, filepath, device='cpu'):
@@ -224,8 +146,6 @@ elif jpy_session_name:
 else:
   unique_number = random.randint(0, 31)
   print(f"Using a random unique number: {unique_number}")
-
-#@title The Inference Loop & AND Submit
 
 ################################################
 
