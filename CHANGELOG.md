@@ -6,6 +6,10 @@
 * **Result:** Promising. Initial testing on the 300-sample set shows the model now successfully discerns between "Far" and "Close" views based on pixels alone, even when both inputs are marked as `Unknown`.
 * **Performance:** Achieved an **F1-score of 0.85 for Cross Far** with significantly more "honest" visual classification.
 
+Spatial Correction: Successfully decoupled "Visual Distance" from "Database Distance."
+Archive Recovery: The model is now capable of identifying "Inter-square" (Cross Far) images even when subject/camera coordinates are conflated (0m) or missing (Unknown).
+Data Integrity: This allows for a more accurate map of what is actually depicted in the Geograph archive, rather than just where the photographer was standing.
+
 ## v2.2: Hard Metadata Blackout (Experimental)
 **Focus: Forced Visual Learning**
 
