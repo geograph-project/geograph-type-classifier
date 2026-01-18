@@ -1,4 +1,18 @@
-# v2.1: Stochastic Distance Index Corruption
+## v2.3: Global Distance Dropout & Refined Corruption
+**Focus: Breaking Metadata Dependency**
+
+* **Global Dropout Implementation:** Introduced a **30% universal dropout** where the distance is set to `Unknown` (Index 22) for *all* classes. This ensures the `Unknown` tag provides zero predictive value, forcing the model to rely on CLIP visual embeddings.
+* **Refined Cross-Far Corruption:** For the remaining 70% of `Cross Far` samples, distance is corrupted to a random short-range value (Indices 0–9).
+* **Result:** Promising. Initial testing on the 300-sample set shows the model now successfully discerns between "Far" and "Close" views based on pixels alone, even when both inputs are marked as `Unknown`.
+* **Performance:** Achieved an **F1-score of 0.85 for Cross Far** with significantly more "honest" visual classification.
+
+## v2.2: Hard Metadata Blackout (Experimental)
+**Focus: Forced Visual Learning**
+
+* **Strategy:** Set `dist_val = 22` (Unknown) for 100% of `Cross Far` training samples.
+* **Result:** **Unsuccessful.** Created a "Shortcut Bias" where the model learned that the `Unknown` tag itself was a strong predictor for `Cross Far`. This caused the model to overwhelmingly select `Cross Far` for almost any image lacking distance metadata, including close-range Geographs.
+
+* # v2.1: Stochastic Distance Index Corruption
 
 Resolved Feature Leakage where the model relied exclusively on distance metadata for Cross Far predictions. We implemented a 30% corruption rate on the distance input for Cross Far training samples:
 
@@ -10,6 +24,7 @@ This ensures the model identifies "Long Distance Views" based on visual signatur
 
 Deterministic Corruption: Implemented a row-level strategy by seeding the local random generator with the gridimage_id. This ensures 100% reproducibility across training runs without affecting global random states.
 
+* **Result:** **Unsuccessful.** was found to not notablely impve the detection of Cross-Far (when distance unknown or wrong), althoug seems to have improved other classes a bit, as less reliant on distance
 
 # v2: Dataset Expansion & Class Balancing
 
