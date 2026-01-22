@@ -15,6 +15,19 @@ While *CLIP the Landscape* demonstrated the efficacy of fusing CLIP embeddings w
 
 ---
 
+## Classification Categories
+The model is trained to categorize images into seven core Geograph "Type" tags. These categories capture a mix of perspective, proximity, and administrative classification:
+
+* **Aerial**: High-altitude perspectives (traditionally from planes/helicopters).
+* **Close Look**: Macro or tight-framed shots where the subject is in immediate proximity.
+* **Cross Far**: Identifies long-range "Cross Grid" images. While our standard "Cross Grid" tag can be inferred from coordinates, "Cross Far" acts as a proxy for images that are visually long-range (e.g., a subject significantly far across a grid line).
+* **Extra**: Supplementary or outlier imagery within the dataset.
+* **Geograph**: Standard archival imagery matching the core project criteria.
+* **Inside**: Interior shots or enclosed environments.
+* **From Drone**: *Experimental.* An attempt to classify modern drone imagery uniquely. Note: This is not a (yet) a formal Geograph tag, and current model performance is limited due to a smaller training set relative to other classes. Generally captures imagery at a closer range than traditional Aerial imagery.
+
+---
+
 ## Technical Architecture & Pipeline
 
 The model utilizes a multi-modal fusion approach, combining high-level visual feature extraction with spatial metadata to predict archival classifications.
@@ -29,7 +42,7 @@ The model utilizes a multi-modal fusion approach, combining high-level visual fe
     This distance scalar is quantized to provide the model with a sense of scale and proximity.
 3.  **Feature Fusion:** The 512-D visual embedding and the distance metadata are concatenated into a single input vector.
 4.  **Classification Head:** This fused vector is passed into a **Multi-Layer Perceptron (MLP)**. To ensure the model does not over-fit on specific visual patterns—especially for tags that represent administrative rather than purely visual data—we employ **Stochastic Dropout** during the training phase.
-5.  **Output:** The model produces probability scores across the 7 Geograph "Type" tags (e.g., Structure, Landform, Event, etc.).
+5.  **Output:** The model produces probability scores across the 7 Geograph "Type" tags.
 
 ---
 
